@@ -991,8 +991,8 @@
             // My List Section (display first)
             const myList = getMyList();
             if (myList.length > 0) {
-                const myListSection = createContentSection('My List', myList.slice(0, 6), 'mylist');
-                if (myList.length > 6) { myListSection.querySelector('.section-title').innerHTML += ` <a href="#" class="view-all" data-section="mylist">View All</a>`; }
+                const myListSection = createContentSection('My List', myList.slice(0, 10), 'mylist'); // Show 10 items
+                if (myList.length > 10) { myListSection.querySelector('.section-title').innerHTML += ` <a href="#" class="view-all" data-section="mylist">View All</a>`; } // Show View All if > 10
                 homeContainer.appendChild(myListSection);
             }
             
@@ -1020,7 +1020,7 @@
                     // 4. Fetch recommendations for this specific seedItem
                     try {
                         // Use await here to process sequentially
-                        const response = await fetch(`/recommend/${encodeURIComponent(seedItem.title)}?top_n=6`); // Fetch 6 recs
+                        const response = await fetch(`/recommend/${encodeURIComponent(seedItem.title)}?top_n=10`); // Fetch 10 recs
                         const data = await response.json();
 
                         // 5. Display items in this section's grid
@@ -1042,12 +1042,13 @@
             homeContainer.appendChild(popularSection);
             try {
                 // Fetch popular items asynchronously (doesn't need to wait for recommendations)
-                const response = await fetch('/popular?limit=7');
+                const response = await fetch('/popular?limit=10'); // Fetch 10 popular items too
                 const data = await response.json();
                 const gridDiv = popularSection.querySelector('.section-content');
                 if (response.ok && data.popular_items && data.popular_items.length > 0) {
-                    displayItems(data.popular_items.slice(0, 6), gridDiv, 'popular');
-                    popularSection.querySelector('.section-title').innerHTML += ` <a href="#" class="view-all" data-section="popular">View All</a>`;
+                    displayItems(data.popular_items, gridDiv, 'popular'); // Display 10 popular items
+                    // No need for View All for /popular as it fetches a fixed limit currently
+                    // popularSection.querySelector('.section-title').innerHTML += ` <a href="#" class="view-all" data-section="popular">View All</a>`;
                 } else { gridDiv.innerHTML = '<div class="info-message">No popular content found</div>'; }
             } catch (error) { 
                 console.error('Error loading popular:', error); 
@@ -1227,5 +1228,4 @@
  
     </script>
 </body>
-</html> 
 </html> 
