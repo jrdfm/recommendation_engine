@@ -1,6 +1,6 @@
-# Netflix-Style Content Recommender
+# Content Recommender
 
-A web application demonstrating a content-based recommendation system for movies and TV shows, built with FastAPI and featuring a dynamic, Netflix-inspired user interface.
+A web application demonstrating a content-based recommendation system for movies and TV shows, built with FastAPI and featuring a dynamic user interface.
 
 ## Features
 
@@ -136,5 +136,3 @@ rec/
 ```
 
 ## Screenshots
-
-The application mimics the Netflix interface with a dark theme and sidebar navigation. 
