@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse All Content</title>
+    <style>
+        /* Ensure html and body take full height */
+        html, body {
+            height: 100%; 
+            margin: 0; /* Reset default margin */
+            padding: 0; /* Reset default padding */
+        }
+        /* Keep existing body styles */
+        body {
+             font-family: sans-serif; 
+             /* margin: 20px; Removed - handled above */
+             background-color: #f4f4f4; 
+        }
+        h1 { text-align: center; color: #333; margin-top: 20px; /* Added margin back */ }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto; /* Adjusted margin */
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            /* Ensure container doesn't also have 100% height unless intended */
+            min-height: calc(100% - 40px); /* Example: Adjust if needed based on body padding/margin */
+        }
+        /* Grid styles (can be shared in a CSS file later) */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .grid-item {
+            background: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.9em;
+            overflow: hidden;
+        }
+        .grid-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        /* Loading indicator style */
+        #loading-indicator {
+            text-align: center;
+            padding: 20px;
+            display: none; /* Hidden by default */
+            color: #555;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Browse All Content</h1>
+        <p><a href="/">&laquo; Back to Main Page</a></p>
+
+        <div id="browse-grid" class="grid">
+            <!-- Content items will be loaded here -->
+        </div>
+
+        <div id="loading-indicator">Loading more items...</div>
+
+    </div> <!-- /container -->
+
+    <script>
+        const browseGrid = document.getElementById('browse-grid');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        let isLoading = false;
+        let currentSkip = 0;
+        const itemsPerBatch = 24;
+        let totalItems = Infinity;
+
+        // Function to display items (appends to grid)
+        function displayItems(items) {
+            if (!items || items.length === 0) {
+                // console.log("displayItems called with no items.");
+                return;
+            }
+            // console.log(`Displaying ${items.length} items.`);
+            items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'grid-item';
+                const img = document.createElement('img');
+                img.src = item.poster_url;
+                img.alt = item.title + ' Poster';
+                img.onerror = function() { this.src = '/static/placeholder.png'; };
+                const titleDiv = document.createElement('div');
+                titleDiv.textContent = `${item.title} (${item.type})`;
+                itemDiv.appendChild(img);
+                itemDiv.appendChild(titleDiv);
+                browseGrid.appendChild(itemDiv);
+            });
+        }
+
+        // Function to fetch a batch of items
+        async function fetchAndDisplayBatch(skip = 0, limit = itemsPerBatch) {
+            // console.log(`fetchAndDisplayBatch called: skip=${skip}, isLoading=${isLoading}, totalItems=${totalItems}, currentSkip=${currentSkip}`);
+            if (isLoading || skip >= totalItems) {
+                // console.log("Fetch blocked: already loading or all items loaded.");
+                return;
+            }
+
+            isLoading = true;
+            loadingIndicator.style.display = 'block';
+
+            const apiUrl = `/all?skip=${skip}&limit=${limit}`;
+            // console.log(`Fetching: ${apiUrl}`);
+
+            try {
+                const response = await fetch(apiUrl);
+                // console.log(`Fetch response status: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                // console.log(`Received data: total_items=${data.total_items}, results_count=${data.results.length}`);
+                
+                totalItems = data.total_items;
+                displayItems(data.results);
+                currentSkip += data.results.length;
+
+                if (currentSkip >= totalItems) {
+                    // console.log("All items loaded.");
+                    loadingIndicator.textContent = "No more items.";
+                } else {
+                    loadingIndicator.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Fetch error:', error); // Keep error logging
+                loadingIndicator.textContent = "Error loading items.";
+            } finally {
+                isLoading = false;
+                // console.log(`Fetch finished. isLoading set to ${isLoading}. currentSkip=${currentSkip}`);
+            }
+        }
+
+        // --- Debounce Timer --- 
+        let scrollTimer;
+        const debounceDelay = 250; // Increased delay slightly
+
+        // Scroll event handler (now debounced)
+        function handleScroll() {
+            // Force reflow just before checking heights (hacky, might help)
+            const _unused = document.body.offsetHeight; 
+            
+            const scrollableHeight = Math.max(
+                document.body.scrollHeight, document.documentElement.scrollHeight,
+                document.body.offsetHeight, document.documentElement.offsetHeight,
+                document.body.clientHeight, document.documentElement.clientHeight
+            );
+            const nearBottom = (window.innerHeight + window.scrollY) >= scrollableHeight - 200;
+            
+            clearTimeout(scrollTimer);
+
+            scrollTimer = setTimeout(() => {
+                 // Add back minimal logging just for this check
+                 console.log(`Debounced Check: nearBottom=${nearBottom}, isLoading=${isLoading}, currentSkip=${currentSkip}, totalItems=${totalItems}, scrollY=${window.scrollY}, pageHeight=${scrollableHeight}`);
+                if (nearBottom && !isLoading && currentSkip < totalItems) {
+                     console.log("Near bottom (debounced), fetching next batch...");
+                    fetchAndDisplayBatch(currentSkip);
+                }
+            }, debounceDelay);
+        }
+
+        // --- Initial Page Load & Event Listeners --- 
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndDisplayBatch(0);
+        });
+
+        // Listen on document instead of window (sometimes helps)
+        document.addEventListener('scroll', handleScroll);
+
+    </script>
+</body>
+</html> 

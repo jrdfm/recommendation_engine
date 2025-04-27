@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie & TV Recommender</title>
+    <style>
+        /* Basic Reset & Body */
+        html, body {
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            font-family: sans-serif; 
+            background-color: #141414; /* Netflix dark background */
+            color: #fff;
+        }
+        h1, h2, h3 {
+             color: #fff; 
+        }
+        h1 { text-align: center; margin-top: 20px; margin-bottom: 20px; }
+        a { color: #e5e5e5; text-decoration: none; }
+        a:hover { text-decoration: underline; color: #fff; }
+        hr { border: 0; height: 1px; background: #333; margin: 30px 0; }
+
+        /* Main Layout */
+        .page-wrapper {
+            display: flex;
+            min-height: 100%; /* Ensure wrapper takes full height */
+        }
+
+        /* Netflix-style sidebar */
+        #sidebar {
+            width: 220px; /* Fixed width sidebar */
+            background-color: #141414;
+            padding: 0;
+            height: 100vh; /* Full viewport height */
+            position: sticky; /* Keep sidebar visible on scroll */
+            top: 0;
+            overflow-y: auto; /* Allow sidebar scrolling if needed */
+            border-right: 1px solid #333;
+        }
+        
+        /* Logo styling */
+        .logo {
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .logo img {
+            max-width: 120px;
+        }
+        
+        /* User profile styling */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            padding: 0 20px 20px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        
+        .profile-icon {
+            width: 30px;
+            height: 30px;
+            background-color: #e50914;
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .profile-text {
+            color: #e5e5e5;
+            font-size: 0.9em;
+        }
+        
+        /* Navigation items */
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .nav-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            color: #e5e5e5;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Style for active content type filter */
+        .nav-item.filter-active {
+            color: #e50914; /* Netflix red for active filter */
+            font-weight: bold;
+        }
+        
+        .nav-item i {
+            margin-right: 15px;
+             font-size: 1.2em;
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Genre list styling */
+        #genre-header { /* Using nav-categories as the header now */
+            margin-top: 20px; /* Space above categories */
+        }
+                
+        .toggle-icon {
+            transition: transform 0.3s ease;
+            display: inline-block; /* Needed for transform */
+            margin-left: auto; /* Push icon to the right */
+            padding-left: 10px;
+        }
+        
+        .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        #genre-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 0px; /* Start collapsed */
+            overflow-y: auto;
+            transition: max-height 0.3s ease-in-out;
+            /* display: none; /* Use max-height for animation */
+        }
+        
+        #genre-list.expanded {
+            /* display: block; /* Show when expanded */
+            max-height: 600px; /* Animate to this height */
+        }
+        
+        #genre-list li {
+            margin-bottom: 0;
+        }
+        
+        .genre-link {
+            display: block;
+            padding: 8px 20px 8px 40px; /* Indent genre links */
+            color: #e5e5e5;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s ease;
+            background-color: transparent;
+            text-align: left;
+            border-radius: 0;
+        }
+        
+        .genre-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            text-decoration: none;
+        }
+
+        #main-content {
+            flex-grow: 1; /* Takes remaining width */
+            padding: 20px;
+            background-color: #141414; /* Netflix dark background */
+            /* No need for container div inside main */
+        }
+
+        /* Section Styling */
+        .search-section, .recommendation-section, .direct-search-section {
+             margin-bottom: 30px; /* Space below sections */
+             padding: 20px;
+             border-radius: 5px;
+             background-color: rgba(255, 255, 255, 0.05);
+        }
+        .search-section h2, .recommendation-section h2, .direct-search-section h2 {
+            margin-top: 0;
+            text-align: center;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: calc(70% - 22px); /* Adjust width considering padding/border */
+            margin-right: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background-color: #222;
+            color: #fff;
+        }
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+        #direct-search-button { background-color: #e50914; }
+        #direct-search-button:hover { background-color: #c30710; }
+        #search-button { background-color: #e50914; }
+        #search-button:hover { background-color: #c30710; }
+
+        /* Content Display Area */
+        #content-display-area {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+        #content-display-area h3 {
+             margin-top: 0;
+             text-align: center;
+             margin-bottom: 15px;
+             color: #e5e5e5;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+        }
+        .grid-item {
+            background: transparent;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.9em;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .grid-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .grid-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        
+        /* Content Type Icons */
+        .title-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            color: #e5e5e5;
+        }
+        .content-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            border-radius: 2px;
+            font-size: 10px;
+            margin-right: 4px;
+            color: white;
+            flex-shrink: 0;
+        }
+        .movie-icon {
+            background-color: #e50914;
+        }
+        .tv-icon {
+            background-color: #e50914; /* Use same red for now, can differentiate later */
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #141414;
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalFadeIn 0.3s ease-in-out;
+            color: #e5e5e5;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #fff;
+        }
+        .modal-close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #e5e5e5;
+            background: none;
+            border: none;
+            padding: 0;
+            transition: color 0.2s;
+        }
+        .modal-close:hover {
+            color: #fff;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-details {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        @media (min-width: 768px) {
+            .modal-details {
+                flex-direction: row;
+            }
+        }
+        .modal-poster {
+            flex: 0 0 auto;
+            max-width: 220px;
+        }
+        .modal-poster img {
+            width: 100%;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 15px; /* Space for button */
+        }
+        .modal-info {
+            flex: 1;
+        }
+        .modal-info h3 {
+            margin-top: 0;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+        }
+        .info-row {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #e5e5e5;
+            margin-right: 10px;
+        }
+        .modal-loading {
+            text-align: center;
+            padding: 30px;
+            color: #e5e5e5;
+        }
+
+        /* Loading/Error Messages */
+        .loading-message, .error-message {
+             text-align: center; padding: 15px; margin-top: 10px; border-radius: 4px; 
+        }
+        .loading-message { background-color: rgba(255, 255, 255, 0.1); color: #e5e5e5; }
+        .error-message { background-color: rgba(229, 9, 20, 0.3); color: #e5e5e5; }
+
+        /* My List Button Style */
+        .add-to-list-btn {
+            width: 100%;
+            padding: 10px;
+            background-color: #e50914;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 15px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .add-to-list-btn:hover {
+            background-color: #c30710;
+        }
+        
+        .add-to-list-btn.in-list {
+            background-color: #333; /* Gray when in list */
+        }
+        
+        .add-to-list-btn.in-list:hover {
+            background-color: #555;
+        }
+        
+        /* Empty My List Message */
+        .empty-list {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            font-style: italic;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        /* Home page content sections */
+        .home-container {
+            margin-top: 20px;
+        }
+        
+        .content-section {
+            margin-bottom: 40px;
+        }
+        
+        .section-title {
+            font-size: 1.6em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .view-all {
+            font-size: 0.7em;
+            color: #e5e5e5;
+            margin-left: 15px;
+            padding: 5px 10px;
+            background-color: rgba(229, 9, 20, 0.7);
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .view-all:hover {
+            background-color: #e50914;
+            text-decoration: none;
+        }
+        
+        .section-content {
+            margin-top: 10px;
+        }
+        
+        .section-content.grid {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        }
+        
+        .info-message {
+            text-align: center;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #e5e5e5;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Movie & TV Recommender</h1>
+    <div class="page-wrapper">
+        
+        <!-- **** SIDEBAR **** -->
+        <nav id="sidebar">
+            <div class="logo">
+                <img src="/static/netflix-logo.svg" alt="Netflix Logo">
+            </div>
+            
+            <div class="user-profile">
+                <div class="profile-icon">JR</div>
+                <div class="profile-text">Switch Profiles</div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item" id="nav-search">
+                    <i>🔍</i> Search
+                </li>
+                <li class="nav-item active" id="nav-home">
+                    <i>🏠</i> Home
+                </li>
+                <li class="nav-item" id="nav-shows">
+                    <i>📺</i> Shows
+                </li>
+                <li class="nav-item" id="nav-movies">
+                    <i>🎬</i> Movies
+                </li>
+                <li class="nav-item" id="nav-mylist">
+                    <i>📋</i> My List
+                </li>
+                <li class="nav-item" id="nav-categories">
+                    <i>📂</i> Categories <span class="toggle-icon">▼</span>
+                </li>
+            </ul>
+            
+            <ul id="genre-list">
+                <!-- Genre links will be loaded here -->
+                <li class="loading-message">Loading...</li> 
+            </ul>
+        </nav>
+
+        <!-- **** MAIN CONTENT **** -->
+        <main id="main-content">
+            
+            <!-- Content sections -->
+            <div id="main-page-sections">
+                <!-- Search Section (initially hidden, shown when Search is clicked) -->
+                <div class="direct-search-section" id="search-section" style="display: none;">
+                    <h2>Search Database</h2>
+                    <input type="text" id="direct-search-input" placeholder="Enter title keywords">
+                    <button id="direct-search-button">Search</button>
+                    <div id="direct-search-output">
+                        <!-- Direct search results -->
+                    </div>
+                </div>
+
+                <!-- Recommendation Section -->
+                <div class="recommendation-section">
+                    <h2>Get Recommendations</h2>
+                    <input type="text" id="title-input" placeholder="Enter a Movie or TV Show Title">
+                    <button id="search-button">Get Recommendations</button>
+                    <div id="recommendations-output">
+                        <!-- Recommendation results -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Display Area (for Popular / Genre / My List / All Movies / All Shows Results) -->
+            <div id="content-display-area">
+                <!-- Content loaded here by JS -->
+            </div>
+
+        </main> <!-- /main-content -->
+
+    </div> <!-- /page-wrapper -->
+
+    <!-- **** MODAL COMPONENT **** -->
+    <div class="modal-overlay" id="details-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Item Details</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <div class="modal-loading">Loading details...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- **** JAVASCRIPT **** -->
+    <script>
+        // --- Get Element References --- 
+        const titleInput = document.getElementById('title-input');
+        const searchButton = document.getElementById('search-button');
+        const recommendationsOutputDiv = document.getElementById('recommendations-output');
+        const directSearchInput = document.getElementById('direct-search-input');
+        const directSearchButton = document.getElementById('direct-search-button');
+        const directSearchOutputDiv = document.getElementById('direct-search-output');
+        const genreListUl = document.getElementById('genre-list');
+        const contentDisplayArea = document.getElementById('content-display-area');
+        let popularGridDiv; // Declared with let, assigned when needed
+        const toggleIcon = document.querySelector('#nav-categories .toggle-icon'); 
+        const detailsModal = document.getElementById('details-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalClose = document.getElementById('modal-close');
+
+        // --- State Variables --- 
+        let isLoading = false;
+        let currentView = 'home'; 
+        let currentGenre = null;
+        let currentSkip = 0;
+        let totalItemsInView = Infinity; 
+        const itemsPerBatch = 24;
+        let isGenreListCollapsed = true; 
+
+        // --- Content Type Icons ---
+        const MOVIE_ICON = '🎬';
+        const TV_ICON = '📺';
+
+        // --- Modal Functions ---
+        function openModal(title) {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = '<div class="modal-loading">Loading details...</div>';
+            detailsModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; 
+        }
+
+        function closeModal() {
+            detailsModal.style.display = 'none';
+            document.body.style.overflow = 'auto'; 
+        }
+
+        modalClose.addEventListener('click', closeModal);
+        detailsModal.addEventListener('click', function(e) {
+            if (e.target === detailsModal) {
+                closeModal();
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && detailsModal.style.display === 'flex') {
+                closeModal();
+            }
+        });
+
+        function showItemDetails(item, source) {
+            openModal("Loading...");
+            const itemId = item.id;
+            fetch(`/item/${itemId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(itemDetails => {
+                    modalTitle.textContent = "Details";
+                    const details = document.createElement('div');
+                    details.className = 'modal-details';
+                    
+                    const posterDiv = document.createElement('div');
+                    posterDiv.className = 'modal-poster';
+                    const img = document.createElement('img');
+                    img.src = itemDetails.poster_url;
+                    img.alt = `${itemDetails.title} Poster`;
+                    img.onerror = function() { this.src = '/static/placeholder.png'; };
+                    posterDiv.appendChild(img);
+                    
+                    const addToListBtn = document.createElement('button');
+                    addToListBtn.className = 'add-to-list-btn';
+                    const isInMyList = isItemInMyList(itemDetails.id);
+                    addToListBtn.textContent = isInMyList ? 'Remove from My List' : 'Add to My List';
+                    if (isInMyList) addToListBtn.classList.add('in-list');
+                    
+                    addToListBtn.addEventListener('click', () => {
+                        toggleMyListItem(itemDetails);
+                        const nowInList = isItemInMyList(itemDetails.id);
+                        addToListBtn.textContent = nowInList ? 'Remove from My List' : 'Add to My List';
+                        addToListBtn.classList.toggle('in-list', nowInList);
+                        if (currentView === 'mylist') loadMyList(); 
+                    });
+                    posterDiv.appendChild(addToListBtn);
+                    
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'modal-info';
+                    const titleEl = document.createElement('h3');
+                    const iconSpan = document.createElement('span');
+                    iconSpan.className = 'content-icon';
+                    if (itemDetails.type.toLowerCase() === 'movie') {
+                        iconSpan.className += ' movie-icon';
+                        iconSpan.textContent = MOVIE_ICON;
+                    } else { 
+                        iconSpan.className += ' tv-icon';
+                        iconSpan.textContent = TV_ICON;
+                    }
+                    titleEl.appendChild(iconSpan);
+                    titleEl.appendChild(document.createTextNode(itemDetails.title));
+                    infoDiv.appendChild(titleEl);
+                    
+                    const excludeFields = ['id', 'poster_path', 'poster_url', 'title', 'type', 'tags'];
+                    const fieldLabels = {
+                        'overview': 'Overview', 'genre_names': 'Genres', 'year': 'Year', 'rating': 'Rating',
+                        'popularity': 'Popularity', 'vote_average': 'Avg Rating', 'vote_count': 'Votes', 
+                        'cast': 'Cast', 'director': 'Director', 'runtime': 'Runtime'
+                    };
+                    const orderedFields = ['year', 'genre_names', 'rating', 'vote_average', 'popularity', 'runtime', 'director', 'cast', 'overview'];
+                    const remainingFields = Object.keys(itemDetails).filter(field => !excludeFields.includes(field) && !orderedFields.includes(field));
+                    const allFields = [...orderedFields, ...remainingFields];
+                    
+                    allFields.forEach(field => {
+                        const value = itemDetails[field];
+                        if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)) return;
+                        const fieldRow = document.createElement('div');
+                        fieldRow.className = 'info-row';
+                        const label = fieldLabels[field] || field.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                        fieldRow.innerHTML = `<span class="info-label">${label}:</span> `;
+                        if (Array.isArray(value)) fieldRow.innerHTML += value.join(', ');
+                        else if (field === 'rating' || field === 'vote_average') fieldRow.innerHTML += (parseFloat(value).toFixed(1) + ' / 10');
+                        else if (field === 'overview') fieldRow.innerHTML += '<br>' + value;
+                        else fieldRow.innerHTML += value;
+                        infoDiv.appendChild(fieldRow);
+                    });
+                    
+                    details.appendChild(posterDiv);
+                    details.appendChild(infoDiv);
+                    modalBody.innerHTML = '';
+                    modalBody.appendChild(details);
+                })
+                .catch(error => {
+                    console.error('Error fetching item details:', error);
+                    modalTitle.textContent = 'Error';
+                    modalBody.innerHTML = `<div class="error-message">Error loading details: ${error.message}</div>`;
+                });
+        }
+
+        // --- Sidebar Navigation Handlers ---
+        document.getElementById('nav-search').addEventListener('click', function() {
+            document.getElementById('search-section').style.display = 'block';
+            document.querySelector('.recommendation-section').style.display = 'none';
+            contentDisplayArea.innerHTML = ''; 
+            currentView = 'search';
+            setActiveNavItem('nav-search');
+            directSearchInput.focus();
+            document.getElementById('search-section').scrollIntoView({ behavior: 'smooth' });
+        });
+        
+        document.getElementById('nav-home').addEventListener('click', function() {
+            document.getElementById('search-section').style.display = 'none';
+            document.querySelector('.recommendation-section').style.display = 'block'; 
+            loadHomePage();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveNavItem('nav-home');
+        });
+        
+        document.getElementById('nav-shows').addEventListener('click', function() {
+            document.getElementById('search-section').style.display = 'none';
+            document.querySelector('.recommendation-section').style.display = 'none';
+            loadAllContent('tv'); // Use 'tv' to match API endpoint expectation
+            setActiveNavItem('nav-shows');
+        });
+        
+        document.getElementById('nav-movies').addEventListener('click', function() {
+            document.getElementById('search-section').style.display = 'none';
+            document.querySelector('.recommendation-section').style.display = 'none';
+            loadAllContent('movie');
+            setActiveNavItem('nav-movies');
+        });
+        
+        document.getElementById('nav-mylist').addEventListener('click', function() {
+            document.getElementById('search-section').style.display = 'none';
+            document.querySelector('.recommendation-section').style.display = 'none';
+            loadMyList();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveNavItem('nav-mylist');
+        });
+        
+        // Toggle Genre List
+        document.getElementById('nav-categories').addEventListener('click', function() {
+            isGenreListCollapsed = !isGenreListCollapsed;
+            genreListUl.classList.toggle('expanded', !isGenreListCollapsed);
+            toggleIcon.classList.toggle('collapsed', !isGenreListCollapsed);
+            setActiveNavItem('nav-categories'); 
+        });
+        
+        // Function to set active nav item
+        function setActiveNavItem(id) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                item.classList.remove('filter-active'); 
+            });
+            const activeItem = document.getElementById(id);
+            if (activeItem) {
+                activeItem.classList.add('active');
+                if (id === 'nav-movies' || id === 'nav-shows') {
+                    activeItem.classList.add('filter-active');
+                }
+            }
+        }
+
+        // --- Reusable Display Functions --- 
+        function displayItems(items, outputGridElement, source) { 
+            if (!items || items.length === 0) { 
+                if (outputGridElement.children.length === 0) {
+                    outputGridElement.innerHTML = `<div class="info-message">No items found.</div>`;
+                }
+                return; 
+            }
+            const existingMessage = outputGridElement.querySelector('.info-message, .empty-list');
+            if (existingMessage) {
+                outputGridElement.removeChild(existingMessage);
+            }
+
+            items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'grid-item';
+                itemDiv.dataset.id = item.id;
+                itemDiv.addEventListener('click', () => showItemDetails(item, source));
+                
+                const img = document.createElement('img');
+                img.src = item.poster_url;
+                img.alt = item.title + ' Poster';
+                img.onerror = function() { this.src = '/static/placeholder.png'; };
+                
+                const titleContainer = document.createElement('div');
+                titleContainer.className = 'title-container';
+                const iconSpan = document.createElement('span');
+                iconSpan.className = 'content-icon';
+                if (item.type.toLowerCase() === 'movie') {
+                    iconSpan.className += ' movie-icon';
+                    iconSpan.textContent = MOVIE_ICON;
+                    iconSpan.title = 'Movie';
+                } else { 
+                    iconSpan.className += ' tv-icon';
+                    iconSpan.textContent = TV_ICON;
+                    iconSpan.title = 'TV Show';
+                }
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = item.title;
+                titleContainer.appendChild(iconSpan);
+                titleContainer.appendChild(titleSpan);
+                itemDiv.appendChild(img);
+                itemDiv.appendChild(titleContainer);
+                outputGridElement.appendChild(itemDiv);
+            });
+        }
+        function displayError(message, outputElement) { 
+             outputElement.innerHTML = `<div class="error-message">Error: ${message}</div>`;
+        }
+        function showLoading(outputElement) {
+             outputElement.innerHTML = `<div class="loading-message">Loading...</div>`;
+        }
+        function showMainLoadingIndicator(show = true, message = "Loading...") {
+             let indicator = document.getElementById('loading-indicator');
+             if (indicator && !show) {
+                 indicator.remove();
+             } else if (!indicator && show) {
+                 indicator = document.createElement('div');
+                 indicator.id = 'loading-indicator';
+                 indicator.className = 'loading-message';
+                 contentDisplayArea.appendChild(indicator); // Append to main content area
+             }
+             if (indicator && show) {
+                 indicator.textContent = message;
+                 indicator.style.display = 'block';
+             }
+        }
+        
+        // --- Event Logic Functions --- 
+        async function handleRecommendationSearch() {
+            const title = titleInput.value.trim();
+            if (!title) { displayError("Please enter a title.", recommendationsOutputDiv); return; }
+            showLoading(recommendationsOutputDiv);
+            try {
+                const response = await fetch(`/recommend/${encodeURIComponent(title)}`);
+                if (!response.ok) { throw new Error(`HTTP ${response.status}`); }
+                const data = await response.json();
+                recommendationsOutputDiv.innerHTML = ''; 
+                if (data.recommendations && data.recommendations.length > 0) {
+                    const recGrid = document.createElement('div');
+                    recGrid.className = 'grid';
+                    recommendationsOutputDiv.appendChild(recGrid);
+                    displayItems(data.recommendations, recGrid, 'recommendation'); 
+                } else { recommendationsOutputDiv.innerHTML = `<div class="info-message">No recommendations found.</div>`; }
+            } catch (error) {
+                console.error('Fetch error (recommend):', error);
+                displayError(`Could not fetch recommendations: ${error.message}`, recommendationsOutputDiv);
+            }
+        }
+
+        async function handleDirectSearch() {
+             const query = directSearchInput.value.trim();
+            if (!query || query.length < 2) { displayError("Min 2 chars.", directSearchOutputDiv); return; }
+            showLoading(directSearchOutputDiv);
+            try {
+                const response = await fetch(`/search?query=${encodeURIComponent(query)}`);
+                if (!response.ok) { throw new Error(`HTTP ${response.status}`); }
+                const data = await response.json();
+                directSearchOutputDiv.innerHTML = ''; 
+                if (data.results && data.results.length > 0) {
+                    const searchGrid = document.createElement('div');
+                    searchGrid.className = 'grid';
+                    directSearchOutputDiv.appendChild(searchGrid);
+                    displayItems(data.results, searchGrid, 'search');
+                } else { directSearchOutputDiv.innerHTML = `<div class="info-message">No results found.</div>`; }
+            } catch (error) {
+                console.error('Fetch error (search):', error);
+                displayError(`Search failed: ${error.message}`, directSearchOutputDiv);
+            }
+        }
+
+        async function fetchAndDisplayGenre(genreName, skip = 0) {
+             let gridElement = document.getElementById('popular-grid');
+             if (!gridElement && skip === 0) { 
+                 contentDisplayArea.innerHTML = `<h3>Loading ${genreName}...</h3><div id="popular-grid" class="grid"></div>`;
+                 gridElement = document.getElementById('popular-grid');
+             } else if (!gridElement) { console.error("Grid element missing for genre scroll."); return; }
+             
+            if (isLoading && skip > 0) { return; }
+            const isNewGenre = (skip === 0);
+
+            if (isNewGenre) {
+                currentView = 'genre';
+                currentGenre = genreName;
+                currentSkip = 0;
+                totalItemsInView = Infinity; 
+                gridElement.innerHTML = ''; 
+                contentDisplayArea.querySelector('h3').textContent = `Loading ${genreName}...`;
+                setActiveNavItem('nav-categories'); 
+            } else if (currentView !== 'genre' || currentGenre !== genreName) { return; }
+            if (skip >= totalItemsInView) { showMainLoadingIndicator(true, "No more items."); return; }
+
+            isLoading = true;
+            showMainLoadingIndicator(true); 
+            try {
+                const response = await fetch(`/genre/${encodeURIComponent(genreName)}?skip=${skip}&limit=${itemsPerBatch}`); 
+                if (!response.ok) { throw new Error(`HTTP ${response.status}`); }
+                const data = await response.json();
+                totalItemsInView = data.total_matches; 
+                displayItems(data.results, gridElement, 'genre');
+                currentSkip += data.results.length;
+                if (isNewGenre) { contentDisplayArea.querySelector('h3').textContent = `${genreName}`; }
+                if (currentSkip >= totalItemsInView) { showMainLoadingIndicator(true, "No more items."); }
+                 else { showMainLoadingIndicator(false); }
+            } catch (error) {
+                console.error(`Fetch error (genre: ${genreName}):`, error);
+                displayError(`Could not load ${genreName}: ${error.message}`, gridElement);
+                showMainLoadingIndicator(false);
+            } finally { isLoading = false; }
+        }
+
+        async function loadGenres() {
+            try {
+                const response = await fetch('/genres');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                genreListUl.innerHTML = ''; 
+                if (!data.genres || data.genres.length === 0) { genreListUl.innerHTML = '<li>No genres.</li>'; return; }
+                data.genres.forEach(genre => {
+                    const li = document.createElement('li');
+                    const genreLink = document.createElement('a');
+                    genreLink.className = 'genre-link';
+                    genreLink.textContent = genre;
+                    genreLink.href = '#';
+                    genreLink.dataset.genre = genre;
+                    genreLink.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        fetchAndDisplayGenre(genre, 0); 
+                        if (window.innerWidth < 768) { 
+                            genreListUl.classList.remove('expanded');
+                            toggleIcon.classList.remove('collapsed');
+                            isGenreListCollapsed = true;
+                         }
+                    });
+                    li.appendChild(genreLink);
+                    genreListUl.appendChild(li);
+                });
+                 // Ensure list starts collapsed
+                 genreListUl.classList.remove('expanded');
+                 toggleIcon.classList.remove('collapsed'); 
+                 isGenreListCollapsed = true;
+            } catch (error) {
+                console.error('Fetch error (genres):', error);
+                genreListUl.innerHTML = '<li class="error-message">Load failed.</li>';
+            }
+        }
+
+        // --- Functions for Home Page Sections ---
+        async function loadHomePage() {
+            currentView = 'home';
+            currentGenre = null;
+            contentDisplayArea.innerHTML = ''; 
+            recommendationsOutputDiv.innerHTML = ''; 
+            document.getElementById('search-section').style.display = 'none';
+            document.querySelector('.recommendation-section').style.display = 'block';
+            
+            const homeContainer = document.createElement('div');
+            homeContainer.className = 'home-container';
+            contentDisplayArea.appendChild(homeContainer);
+            
+            // My List
+            const myList = getMyList();
+            if (myList.length > 0) {
+                const myListSection = createContentSection('My List', myList.slice(0, 6), 'mylist');
+                if (myList.length > 6) { myListSection.querySelector('.section-title').innerHTML += ` <a href="#" class="view-all" data-section="mylist">View All</a>`; }
+                homeContainer.appendChild(myListSection);
+            }
+            
+            // Recommendations
+            if (myList.length > 0) {
+                const recItem = myList[0];
+                const recSection = createContentSection(`Recommendations based on ${recItem.title}`, null, 'recommendations');
+                homeContainer.appendChild(recSection);
+                try {
+                    const response = await fetch(`/recommend/${encodeURIComponent(recItem.title)}?top_n=7`);
+                    const data = await response.json();
+                    const gridDiv = recSection.querySelector('.section-content');
+                    if (response.ok && data.recommendations && data.recommendations.length > 0) {
+                        displayItems(data.recommendations.slice(0, 6), gridDiv, 'recommendation');
+                    } else { gridDiv.innerHTML = '<div class="info-message">No recommendations found</div>'; }
+                } catch (error) { console.error('Error loading recs:', error); recSection.querySelector('.section-content').innerHTML = '<div class="error-message">Error loading recs</div>'; }
+            }
+            
+            // Popular
+            const popularSection = createContentSection('Popular Content', null, 'popular');
+            homeContainer.appendChild(popularSection);
+            try {
+                const response = await fetch('/popular?limit=7');
+                const data = await response.json();
+                const gridDiv = popularSection.querySelector('.section-content');
+                if (response.ok && data.popular_items && data.popular_items.length > 0) {
+                    displayItems(data.popular_items.slice(0, 6), gridDiv, 'popular');
+                    popularSection.querySelector('.section-title').innerHTML += ` <a href="#" class="view-all" data-section="popular">View All</a>`;
+                } else { gridDiv.innerHTML = '<div class="info-message">No popular content found</div>'; }
+            } catch (error) { console.error('Error loading popular:', error); popularSection.querySelector('.section-content').innerHTML = '<div class="error-message">Error loading popular</div>'; }
+            
+            addHomeViewAllListeners();
+        }
+        
+        function createContentSection(title, items, sectionType) {
+            const section = document.createElement('div');
+            section.className = 'content-section';
+            const titleEl = document.createElement('h3');
+            titleEl.className = 'section-title';
+            titleEl.textContent = title;
+            section.appendChild(titleEl);
+            const contentEl = document.createElement('div');
+            contentEl.className = 'section-content grid';
+            if (items) { displayItems(items, contentEl, sectionType); }
+             else { contentEl.innerHTML = '<div class="loading-message">Loading...</div>'; }
+            section.appendChild(contentEl);
+            return section;
+        }
+
+        function addHomeViewAllListeners() {
+             document.querySelectorAll('.view-all').forEach(link => {
+                link.replaceWith(link.cloneNode(true)); 
+             });
+             document.querySelectorAll('.view-all').forEach(link => {
+                 link.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     const section = this.getAttribute('data-section');
+                     if (section === 'mylist') { loadMyList(); }
+                      else if (section === 'popular') { loadPopular(); } 
+                 });
+             });
+        }
+                
+        async function loadPopular() {
+            currentView = 'popular';
+            currentGenre = null;
+            currentSkip = 0; 
+            totalItemsInView = Infinity; 
+            contentDisplayArea.innerHTML = `<h3>Popular Content</h3><div id="popular-grid" class="grid"></div>`;
+            popularGridDiv = document.getElementById('popular-grid');
+            showLoading(popularGridDiv);
+            setActiveNavItem('nav-home');
+            try {
+                const response = await fetch('/popular?limit=24');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                popularGridDiv.innerHTML = '';
+                 if (data.popular_items && data.popular_items.length > 0) {
+                    displayItems(data.popular_items, popularGridDiv, 'popular');
+                    currentSkip = data.popular_items.length;
+                    // Cannot paginate /popular easily
+                    showMainLoadingIndicator(true, "Showing all popular items."); 
+                 } else { displayError("No popular items found.", popularGridDiv); }
+            } catch (error) { console.error('Fetch error (popular):', error); displayError(`Could not load popular: ${error.message}`, popularGridDiv); }
+        }
+
+        // --- Scroll Handling --- 
+        let scrollTimer;
+        const debounceDelay = 250;
+
+        function handleScroll() {
+            const scrollableHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight, document.body.clientHeight, document.documentElement.clientHeight);
+            const nearBottom = (window.innerHeight + window.scrollY) >= scrollableHeight - 200;
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                if (!popularGridDiv) { return; } 
+                if (nearBottom && !isLoading && currentSkip < totalItemsInView) {
+                    if (currentView === 'genre' && currentGenre) {
+                        fetchAndDisplayGenre(currentGenre, currentSkip);
+                    } else if (currentView === 'movies') {
+                        fetchAndDisplayBatch(currentSkip, 'movie', popularGridDiv); 
+                    } else if (currentView === 'shows') {
+                        fetchAndDisplayBatch(currentSkip, 'tv', popularGridDiv); 
+                    }
+                }
+            }, debounceDelay);
+        }
+        
+        // Load all content of a specific type (movie or tv) using the new API endpoints
+        function loadAllContent(type) {
+            currentView = type === 'movie' ? 'movies' : 'shows';
+            currentGenre = null;
+            isLoading = false;
+            currentSkip = 0;
+            totalItemsInView = Infinity; 
+            let title = type === 'movie' ? 'All Movies' : 'All TV Shows';
+            contentDisplayArea.innerHTML = ` 
+                <h3>${title}</h3>
+                <div id="popular-grid" class="grid">
+                </div>
+            `;
+            popularGridDiv = document.getElementById('popular-grid'); 
+            if (!popularGridDiv) { console.error("CRITICAL: Grid not found after update!"); return; }
+            setActiveNavItem(type === 'movie' ? 'nav-movies' : 'nav-shows');
+            fetchAndDisplayBatch(0, type, popularGridDiv);
+        }
+        
+        // Fetch function using the new API endpoints (/api/movies, /api/shows)
+        async function fetchAndDisplayBatch(skip = 0, type, gridElement) { 
+            if (!gridElement) { console.error("FetchBatch missing gridElement!"); return; }
+            if (isLoading || skip >= totalItemsInView) {
+                 if (skip >= totalItemsInView) { showMainLoadingIndicator(true, "No more items."); }
+                return;
+            }
+            isLoading = true;
+            showMainLoadingIndicator(true);
+            const apiEndpoint = type === 'movie' ? '/api/movies' : '/api/shows';
+            const apiUrl = `${apiEndpoint}?skip=${skip}&limit=${itemsPerBatch}`;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) { throw new Error(`HTTP ${response.status}`); }
+                const data = await response.json();
+                if (!data.results) { throw new Error("Invalid API data."); }
+                totalItemsInView = data.total_items;
+                currentSkip = skip + data.results.length;
+                displayItems(data.results, gridElement, currentView);
+                if (currentSkip >= totalItemsInView) { showMainLoadingIndicator(true, "No more items."); }
+                 else { showMainLoadingIndicator(false); }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                showMainLoadingIndicator(true, "Error loading items."); 
+                if (skip === 0) { gridElement.innerHTML = `<div class="error-message">Error loading ${type}: ${error.message}</div>`; }
+            } finally { isLoading = false; }
+        }
+
+        // --- My List Management Functions ---
+        function getMyList() {
+            const myListJSON = localStorage.getItem('myList');
+            return myListJSON ? JSON.parse(myListJSON) : [];
+        }
+        function saveMyList(list) {
+            localStorage.setItem('myList', JSON.stringify(list));
+        }
+        function isItemInMyList(itemId) {
+            return getMyList().some(item => item.id === itemId);
+        }
+        function toggleMyListItem(item) {
+            let myList = getMyList();
+            const index = myList.findIndex(listItem => listItem.id === item.id);
+            if (index === -1) {
+                const itemToSave = { id: item.id, title: item.title, type: item.type, poster_url: item.poster_url };
+                myList.push(itemToSave);
+            } else { myList.splice(index, 1); }
+            saveMyList(myList);
+        }
+        
+        function loadMyList() {
+            const myList = getMyList();
+            currentView = 'mylist';
+            currentGenre = null;
+            currentSkip = 0; 
+            totalItemsInView = myList.length;
+            contentDisplayArea.innerHTML = `<h3>My List</h3><div id="popular-grid" class="grid"></div>`;
+            popularGridDiv = document.getElementById('popular-grid');
+            setActiveNavItem('nav-mylist');
+            if (myList.length === 0) { popularGridDiv.innerHTML = '<div class="empty-list">Your list is empty.</div>'; }
+             else { displayItems(myList, popularGridDiv, 'mylist'); }
+        }
+ 
+        // --- Attach Event Listeners --- 
+        searchButton.addEventListener('click', handleRecommendationSearch);
+        titleInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleRecommendationSearch(); });
+        directSearchButton.addEventListener('click', handleDirectSearch);
+        directSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleDirectSearch(); });
+        document.addEventListener('scroll', handleScroll);
+ 
+        // --- Initial Page Load Actions --- 
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGenres(); 
+            loadHomePage(); 
+        });
+ 
+    </script>
+</body>
+</html> 
