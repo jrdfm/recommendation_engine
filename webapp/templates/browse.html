@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Browse All Content</title>
+    <title>{{ page_title }}</title>
     <style>
         /* Ensure html and body take full height */
         html, body {
@@ -61,7 +61,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Browse All Content</h1>
+        <h1>{{ page_title }}</h1>
         <p><a href="/">&laquo; Back to Main Page</a></p>
 
         <div id="browse-grid" class="grid">
@@ -75,6 +75,10 @@
     <script>
         const browseGrid = document.getElementById('browse-grid');
         const loadingIndicator = document.getElementById('loading-indicator');
+
+        // Get content type from backend (passed via template)
+        const contentType = "{{ content_type }}"; 
+        console.log('Content type:', contentType); // Log for debugging
 
         let isLoading = false;
         let currentSkip = 0;
@@ -114,8 +118,16 @@
             isLoading = true;
             loadingIndicator.style.display = 'block';
 
-            const apiUrl = `/all?skip=${skip}&limit=${limit}`;
-            // console.log(`Fetching: ${apiUrl}`);
+            // Construct API URL based on contentType
+            let apiUrl;
+            if (contentType === 'movie') {
+                apiUrl = `/api/movies?skip=${skip}&limit=${limit}`;
+            } else if (contentType === 'show') {
+                apiUrl = `/api/shows?skip=${skip}&limit=${limit}`;
+            } else { // Default to 'all'
+                apiUrl = `/all?skip=${skip}&limit=${limit}`;
+            }
+            console.log(`Fetching: ${apiUrl}`); // Log the actual URL
 
             try {
                 const response = await fetch(apiUrl);

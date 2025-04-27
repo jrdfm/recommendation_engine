@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import os
+from typing import Optional # Import Optional
 
 # --- Configuration & Data Loading --- 
 DATA_PATH = "../data/content_raw.csv" # Path relative to app.py
@@ -329,8 +330,8 @@ def get_shows(skip: int = 0, limit: int = 24):
         skip = 0
         
     try:
-        # Filter for TV Shows first (adjust 'tv show' if your data uses a different string)
-        shows_df = content_df[content_df['type'].str.lower() == 'tv show'] 
+        # Filter for TV Shows first (using 'tv' as specified)
+        shows_df = content_df[content_df['type'].str.lower() == 'tv'] 
         
         # Sort by popularity
         sorted_shows = shows_df.sort_values(by='popularity', ascending=False)
@@ -355,12 +356,6 @@ def get_shows(skip: int = 0, limit: int = 24):
     except Exception as e:
         print(f"Error getting TV shows: {e}")
         raise HTTPException(status_code=500, detail="Internal server error processing TV show request.")
-
-# --- NEW Route to serve the browse page HTML ---
-@app.get("/browse", response_class=HTMLResponse) # Specify HTMLResponse
-async def read_browse_page(request: Request):
-    """ Serves the HTML page for browsing all content. """
-    return templates.TemplateResponse("browse.html", {"request": request})
 
 # --- Recommendation Logic Function (adapted from notebook) ---
 def get_recommendations_logic(title: str, top_n: int = 10):

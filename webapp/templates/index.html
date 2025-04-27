@@ -490,29 +490,32 @@
             </div>
             
             <ul class="nav-menu">
-                <li class="nav-item" id="nav-search">
-                    <i>🔍</i> Search
-                </li>
-                <li class="nav-item active" id="nav-home">
-                    <i>🏠</i> Home
-                </li>
-                <li class="nav-item" id="nav-shows">
-                    <i>📺</i> Shows
-                </li>
-                <li class="nav-item" id="nav-movies">
-                    <i>🎬</i> Movies
-                </li>
+                 <li class="nav-item" id="nav-search">
+                     <i class="fas fa-search"></i><span>Search</span>
+                 </li>
+                 <li class="nav-item active" id="nav-home">
+                     <i class="fas fa-home"></i><span>Home</span>
+                 </li>
+                 <li class="nav-item" id="nav-shows">
+                     <i class="fas fa-tv"></i><span>TV Shows</span>
+                 </li>
+                 <li class="nav-item" id="nav-movies">
+                     <i class="fas fa-film"></i><span>Movies</span>
+                 </li>
                 <li class="nav-item" id="nav-mylist">
-                    <i>📋</i> My List
+                    <i class="fas fa-list-ul"></i><span>My List</span>
                 </li>
-                <li class="nav-item" id="nav-categories">
-                    <i>📂</i> Categories <span class="toggle-icon">▼</span>
+
+                <!-- Genre Header/Toggler -->
+                <li id="nav-categories" class="nav-item">
+                    <i class="fas fa-th-list"></i>
+                    <span>Categories</span>
+                    <i class="fas fa-chevron-down toggle-icon collapsed"></i>
                 </li>
             </ul>
             
             <ul id="genre-list">
-                <!-- Genre links will be loaded here -->
-                <li class="loading-message">Loading...</li> 
+                <!-- Genre links will be added here by JS -->
             </ul>
         </nav>
 
@@ -730,6 +733,7 @@
         });
         
         document.getElementById('nav-shows').addEventListener('click', function() {
+            console.log("TV Shows sidebar clicked");
             document.getElementById('search-section').style.display = 'none';
             document.querySelector('.recommendation-section').style.display = 'none';
             loadAllContent('tv'); // Use 'tv' to match API endpoint expectation
