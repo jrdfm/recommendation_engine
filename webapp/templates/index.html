@@ -966,20 +966,29 @@
             }
         }
 
+        // --- Helper Function to Shuffle Array (Fisher-Yates) ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+            }
+            return array;
+        }
+
         // --- Functions for Home Page Sections ---
         async function loadHomePage() {
             currentView = 'home';
             currentGenre = null;
             contentDisplayArea.innerHTML = ''; 
-            recommendationsOutputDiv.innerHTML = ''; 
+            recommendationsOutputDiv.innerHTML = ''; // Clear old rec output if it existed somewhere else
             document.getElementById('search-section').style.display = 'none';
-            document.querySelector('.recommendation-section').style.display = 'block';
+            document.querySelector('.recommendation-section').style.display = 'block'; // Keep rec input section visible
             
             const homeContainer = document.createElement('div');
             homeContainer.className = 'home-container';
             contentDisplayArea.appendChild(homeContainer);
             
-            // My List
+            // My List Section (display first)
             const myList = getMyList();
             if (myList.length > 0) {
                 const myListSection = createContentSection('My List', myList.slice(0, 6), 'mylist');
@@ -987,25 +996,52 @@
                 homeContainer.appendChild(myListSection);
             }
             
-            // Recommendations
+            // --- NEW Recommendation Logic ---
             if (myList.length > 0) {
-                const recItem = myList[0];
-                const recSection = createContentSection(`Recommendations based on ${recItem.title}`, null, 'recommendations');
-                homeContainer.appendChild(recSection);
-                try {
-                    const response = await fetch(`/recommend/${encodeURIComponent(recItem.title)}?top_n=7`);
-                    const data = await response.json();
-                    const gridDiv = recSection.querySelector('.section-content');
-                    if (response.ok && data.recommendations && data.recommendations.length > 0) {
-                        displayItems(data.recommendations.slice(0, 6), gridDiv, 'recommendation');
-                    } else { gridDiv.innerHTML = '<div class="info-message">No recommendations found</div>'; }
-                } catch (error) { console.error('Error loading recs:', error); recSection.querySelector('.section-content').innerHTML = '<div class="error-message">Error loading recs</div>'; }
+                // 1. Select seed items
+                let seedItems;
+                if (myList.length <= 5) {
+                    seedItems = [...myList]; // Use all items
+                } else {
+                    // Shuffle and take first 5
+                    const shuffledList = shuffleArray([...myList]);
+                    seedItems = shuffledList.slice(0, 5);
+                }
+
+                // 2. Loop and fetch/display for each seed item (sequentially using await)
+                for (const seedItem of seedItems) {
+                    if (!seedItem || !seedItem.title) continue; // Skip if item is invalid
+
+                    // 3. Create the section structure immediately
+                    const recSection = createContentSection(`Because you liked ${seedItem.title}`, null, `recommendation-${seedItem.id}`);
+                    homeContainer.appendChild(recSection); // Add section to page
+                    const gridDiv = recSection.querySelector('.section-content'); // Get the grid div within this new section
+
+                    // 4. Fetch recommendations for this specific seedItem
+                    try {
+                        // Use await here to process sequentially
+                        const response = await fetch(`/recommend/${encodeURIComponent(seedItem.title)}?top_n=6`); // Fetch 6 recs
+                        const data = await response.json();
+
+                        // 5. Display items in this section's grid
+                        if (response.ok && data.recommendations && data.recommendations.length > 0) {
+                            displayItems(data.recommendations, gridDiv, `recommendation-${seedItem.id}`);
+                        } else {
+                            gridDiv.innerHTML = '<div class="info-message">No specific recommendations found for this title.</div>';
+                        }
+                    } catch (error) {
+                        console.error(`Error loading recommendations for ${seedItem.title}:`, error);
+                        gridDiv.innerHTML = '<div class="error-message">Error loading recommendations for this title.</div>';
+                    }
+                }
             }
+            // --- END NEW Recommendation Logic ---
             
-            // Popular
+            // Popular Section (display last)
             const popularSection = createContentSection('Popular Content', null, 'popular');
             homeContainer.appendChild(popularSection);
             try {
+                // Fetch popular items asynchronously (doesn't need to wait for recommendations)
                 const response = await fetch('/popular?limit=7');
                 const data = await response.json();
                 const gridDiv = popularSection.querySelector('.section-content');
@@ -1013,7 +1049,10 @@
                     displayItems(data.popular_items.slice(0, 6), gridDiv, 'popular');
                     popularSection.querySelector('.section-title').innerHTML += ` <a href="#" class="view-all" data-section="popular">View All</a>`;
                 } else { gridDiv.innerHTML = '<div class="info-message">No popular content found</div>'; }
-            } catch (error) { console.error('Error loading popular:', error); popularSection.querySelector('.section-content').innerHTML = '<div class="error-message">Error loading popular</div>'; }
+            } catch (error) { 
+                console.error('Error loading popular:', error); 
+                popularSection.querySelector('.section-content').innerHTML = '<div class="error-message">Error loading popular</div>'; 
+            }
             
             addHomeViewAllListeners();
         }
@@ -1188,4 +1227,5 @@
  
     </script>
 </body>
+</html> 
 </html> 
